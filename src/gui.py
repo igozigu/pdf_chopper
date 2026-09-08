@@ -426,21 +426,13 @@ class PDFChopperApp:
         self.lbl_status.config(text=f"분할 중 ({current}/{total}): {filename}")
 
     def _on_split_success(self, output_dir: str, file_count: int):
-        """분할 완료 처리"""
+        """분할 완료 처리 (팝업 없이 상태 레이블 및 결과 폴더 열기 버튼 활성화)"""
         self.is_processing = False
         self.btn_reset.config(state="normal")
         self.btn_open_folder.config(state="normal")
-        self.lbl_status.config(text=f"✔ 분할 완료! 총 {file_count}개의 파일이 생성되었습니다.")
-
-        # 사용자 완료 팝업
-        msg = (
-            f"PDF 분할이 성공적으로 완료되었습니다!\n\n"
-            f"• 분할된 파일 개수: {file_count}개\n"
-            f"• 저장 폴더:\n{output_dir}\n\n"
-            f"지금 바로 결과 폴더를 여시겠습니까?"
+        self.lbl_status.config(
+            text=f"✔ 분할 완료! 총 {file_count}개 파일 저장 완료 (오른쪽 '결과 폴더 열기' 버튼으로 확인 가능)"
         )
-        if messagebox.askyesno("분할 완료", msg):
-            self.on_open_folder()
 
     def _on_split_error(self, error_msg: str):
         """분할 중 오류 발생 처리"""
