@@ -23,8 +23,8 @@ def main():
 
     # 창 화면 중앙 배치
     root.update_idletasks()
-    width = 680
-    height = 680
+    width = 720
+    height = 740
     x = (root.winfo_screenwidth() // 2) - (width // 2)
     y = (root.winfo_screenheight() // 2) - (height // 2)
     root.geometry(f"{width}x{height}+{x}+{y}")

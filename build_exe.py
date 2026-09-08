@@ -45,13 +45,20 @@ def build():
     target_exe = os.path.join(base_dir, "PDF_Chopper.exe")
 
     if os.path.exists(built_exe):
-        shutil.copy2(built_exe, target_exe)
-        exe_size_mb = os.path.getsize(target_exe) / (1024 * 1024)
-        print("\n" + "=" * 60)
-        print("[성공] 빌드가 완료되었습니다!")
-        print(f"* 실행 파일 위치: {target_exe}")
-        print(f"* 파일 크기: {exe_size_mb:.1f} MB")
-        print("=" * 60)
+        try:
+            shutil.copy2(built_exe, target_exe)
+            exe_size_mb = os.path.getsize(target_exe) / (1024 * 1024)
+            print("\n" + "=" * 60)
+            print("[성공] 빌드가 완료되었습니다!")
+            print(f"* 실행 파일 위치: {target_exe}")
+            print(f"* 파일 크기: {exe_size_mb:.1f} MB")
+            print("=" * 60)
+        except PermissionError:
+            print("\n" + "=" * 60)
+            print("[성공] dist 폴더에 빌드가 완료되었습니다!")
+            print(f"* 빌드 파일: {built_exe}")
+            print(f"* 알림: 기존 {target_exe}가 실행 중입니다. 프로그램을 종료한 뒤 다시 복사하세요.")
+            print("=" * 60)
     else:
         print(f"[경고] 생성된 exe를 찾을 수 없습니다: {built_exe}")
 

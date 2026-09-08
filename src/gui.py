@@ -33,8 +33,8 @@ class PDFChopperApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("PDF Chopper - 북마크 기반 PDF 자동 분할기")
-        self.root.geometry("680x680")
-        self.root.minsize(580, 580)
+        self.root.geometry("720x740")
+        self.root.minsize(600, 560)
 
         # 시스템 기본 폰트 설정
         self.default_font = ("Malgun Gothic", 9)
@@ -78,10 +78,57 @@ class PDFChopperApp:
 
     def build_ui(self):
         # 최상위 컨테이너 패딩
-        main_frame = ttk.Frame(self.root, padding="16 12 16 16")
+        main_frame = ttk.Frame(self.root, padding="14 10 14 12")
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # 1. 상단 드래그 앤 드롭 영역
+        # -------------------------------------------------------------
+        # 1) 하단 위젯을 먼저 pack(side=tk.BOTTOM)하여
+        #    화면 크기나 DPI 배율에 관계없이 항상 하단에 고정 표시되도록 보장
+        # -------------------------------------------------------------
+
+        # 하단 액션 버튼 영역 (최하단 고정)
+        btn_frame = ttk.Frame(main_frame)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(6, 0))
+
+        self.btn_start = ttk.Button(
+            btn_frame,
+            text="▶ 작업 시작 (PDF 분할)",
+            style="Accent.TButton",
+            command=self.on_start_split,
+            state="disabled"
+        )
+        self.btn_start.pack(side=tk.LEFT, padx=(0, 8), ipady=5)
+
+        self.btn_reset = ttk.Button(
+            btn_frame,
+            text="취소 / 초기화",
+            command=self.reset_ui
+        )
+        self.btn_reset.pack(side=tk.LEFT, padx=(0, 8), ipady=5)
+
+        self.btn_open_folder = ttk.Button(
+            btn_frame,
+            text="📁 결과 폴더 열기",
+            command=self.on_open_folder,
+            state="disabled"
+        )
+        self.btn_open_folder.pack(side=tk.RIGHT, ipady=5)
+
+        # 진행 상태 표시 (프로그레스바 및 상태 라벨, 버튼 바로 위 고정)
+        progress_frame = ttk.Frame(main_frame)
+        progress_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(4, 6))
+
+        self.lbl_status = ttk.Label(progress_frame, text="PDF 파일을 선택하거나 드래그하여 올려주세요.")
+        self.lbl_status.pack(anchor="w", pady=(0, 3))
+
+        self.progress_bar = ttk.Progressbar(progress_frame, orient="horizontal", mode="determinate")
+        self.progress_bar.pack(fill=tk.X)
+
+        # -------------------------------------------------------------
+        # 2) 상단 위젯들을 pack(side=tk.TOP)
+        # -------------------------------------------------------------
+
+        # 상단 드래그 앤 드롭 영역
         self.drop_frame = tk.Frame(
             main_frame,
             bg="#f8fafc",
@@ -91,7 +138,7 @@ class PDFChopperApp:
             bd=0,
             cursor="hand2"
         )
-        self.drop_frame.pack(fill=tk.X, pady=(0, 10), ipady=16)
+        self.drop_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 8), ipady=8)
 
         # 드래그앤드롭 이벤트 등록 (TkinterDnD 지원 시)
         if HAS_DND and hasattr(self.drop_frame, "drop_target_register"):
@@ -108,7 +155,7 @@ class PDFChopperApp:
             bg="#f8fafc",
             fg="#2563eb"
         )
-        self.drop_label.pack(pady=(6, 4))
+        self.drop_label.pack(pady=(4, 2))
 
         self.drop_sublabel = tk.Label(
             self.drop_frame,
@@ -117,19 +164,19 @@ class PDFChopperApp:
             bg="#f8fafc",
             fg="#64748b"
         )
-        self.drop_sublabel.pack(pady=(0, 8))
+        self.drop_sublabel.pack(pady=(0, 6))
 
         browse_btn = ttk.Button(self.drop_frame, text="파일 선택 (탐색기)", command=self.on_browse_file)
-        browse_btn.pack()
+        browse_btn.pack(pady=(0, 2))
 
         # 클릭 이벤트로도 파일 선택 가능하게 연결
         self.drop_frame.bind("<Button-1>", lambda e: self.on_browse_file())
         self.drop_label.bind("<Button-1>", lambda e: self.on_browse_file())
         self.drop_sublabel.bind("<Button-1>", lambda e: self.on_browse_file())
 
-        # 2. 파일 정보 및 분할 옵션 영역
-        info_frame = ttk.LabelFrame(main_frame, text=" 업로드 파일 정보 & 분할 설정 ", padding="10 8 10 8")
-        info_frame.pack(fill=tk.X, pady=(0, 10))
+        # 파일 정보 및 분할 옵션 영역
+        info_frame = ttk.LabelFrame(main_frame, text=" 업로드 파일 정보 & 분할 설정 ", padding="8 6 8 6")
+        info_frame.pack(side=tk.TOP, fill=tk.X, pady=(0, 8))
 
         grid_frame = ttk.Frame(info_frame)
         grid_frame.pack(fill=tk.X)
@@ -145,7 +192,7 @@ class PDFChopperApp:
         self.lbl_file_detail.grid(row=1, column=1, sticky="w", pady=2, columnspan=3)
 
         # 분할 레벨 설정
-        ttk.Label(grid_frame, text="분할 기준:", font=self.title_font).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+        ttk.Label(grid_frame, text="분할 기준:", font=self.title_font).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=3)
         self.combo_level = ttk.Combobox(
             grid_frame,
             values=["1단계 (최상위 목차만)", "1~2단계 목차까지", "모든 목차 레벨"],
@@ -154,7 +201,7 @@ class PDFChopperApp:
         )
         self.combo_level.current(0)
         self.combo_level.bind("<<ComboboxSelected>>", self.on_level_changed)
-        self.combo_level.grid(row=2, column=1, sticky="w", pady=4)
+        self.combo_level.grid(row=2, column=1, sticky="w", pady=3)
 
         # 시작 앞부속 포함 체크박스
         self.var_prefix = tk.BooleanVar(value=True)
@@ -164,18 +211,20 @@ class PDFChopperApp:
             variable=self.var_prefix,
             command=self.update_ranges
         )
-        self.chk_prefix.grid(row=2, column=2, sticky="w", padx=(16, 0), pady=4)
+        self.chk_prefix.grid(row=2, column=2, sticky="w", padx=(16, 0), pady=3)
 
-        # 3. 북마크 분할 미리보기 (트리뷰)
-        preview_frame = ttk.LabelFrame(main_frame, text=" 분할 대상 북마크 목록 미리보기 ", padding="8")
-        preview_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # -------------------------------------------------------------
+        # 3) 중간 영역: 북마크 분할 미리보기 (남은 공간 모두 차지)
+        # -------------------------------------------------------------
+        preview_frame = ttk.LabelFrame(main_frame, text=" 분할 대상 북마크 목록 미리보기 ", padding="6")
+        preview_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         # 트리뷰 및 스크롤바
         tree_container = ttk.Frame(preview_frame)
         tree_container.pack(fill=tk.BOTH, expand=True)
 
         columns = ("seq", "level", "title", "pages", "page_count")
-        self.tree = ttk.Treeview(tree_container, columns=columns, show="headings", selectmode="browse")
+        self.tree = ttk.Treeview(tree_container, columns=columns, show="headings", selectmode="browse", height=8)
         self.tree.heading("seq", text="순번")
         self.tree.heading("level", text="레벨")
         self.tree.heading("title", text="북마크 제목 (생성될 파일명)")
@@ -184,7 +233,7 @@ class PDFChopperApp:
 
         self.tree.column("seq", width=45, anchor="center")
         self.tree.column("level", width=45, anchor="center")
-        self.tree.column("title", width=340, anchor="w")
+        self.tree.column("title", width=360, anchor="w")
         self.tree.column("pages", width=95, anchor="center")
         self.tree.column("page_count", width=55, anchor="center")
 
@@ -193,44 +242,6 @@ class PDFChopperApp:
 
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # 4. 진행 상태 표시 (프로그레스바 및 상태 라벨)
-        progress_frame = ttk.Frame(main_frame)
-        progress_frame.pack(fill=tk.X, pady=(0, 10))
-
-        self.lbl_status = ttk.Label(progress_frame, text="PDF 파일을 선택하거나 드래그하여 올려주세요.")
-        self.lbl_status.pack(anchor="w", pady=(0, 4))
-
-        self.progress_bar = ttk.Progressbar(progress_frame, orient="horizontal", mode="determinate")
-        self.progress_bar.pack(fill=tk.X)
-
-        # 5. 하단 액션 버튼 영역
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.pack(fill=tk.X)
-
-        self.btn_start = ttk.Button(
-            btn_frame,
-            text="▶ 작업 시작 (PDF 분할)",
-            style="Accent.TButton",
-            command=self.on_start_split,
-            state="disabled"
-        )
-        self.btn_start.pack(side=tk.LEFT, padx=(0, 8), ipady=4)
-
-        self.btn_reset = ttk.Button(
-            btn_frame,
-            text="취소 / 초기화",
-            command=self.reset_ui
-        )
-        self.btn_reset.pack(side=tk.LEFT, padx=(0, 8), ipady=4)
-
-        self.btn_open_folder = ttk.Button(
-            btn_frame,
-            text="📁 결과 폴더 열기",
-            command=self.on_open_folder,
-            state="disabled"
-        )
-        self.btn_open_folder.pack(side=tk.RIGHT, ipady=4)
 
     def on_file_drop(self, event):
         """드래그 앤 드롭 파일 수신 처리"""
